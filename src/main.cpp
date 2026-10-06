@@ -26,9 +26,11 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QLocale>
 #include <QMessageBox>
 #include <QSslSocket>
 #include <QStringList>
+#include <QTranslator>
 #ifdef Q_OS_WIN
 #    include <shobjidl_core.h>
 #endif
@@ -41,6 +43,17 @@ using namespace chatterino;
 int main(int argc, char **argv)
 {
     QApplication a(argc, argv);
+
+    // Load bundled translations matching the system locale
+    const auto systemLanguage = QLocale::system().language();
+    if (systemLanguage == QLocale::Spanish || systemLanguage == QLocale::Catalan) {
+        auto *translator = new QTranslator(&a);
+        if (translator->load(QLocale(QLocale::Spanish), "chatterino", "_",
+                             QCoreApplication::applicationDirPath()))
+        {
+            a.installTranslator(translator);
+        }
+    }
 
     QCoreApplication::setApplicationName("chatterino");
     QCoreApplication::setApplicationVersion(CHATTERINO_VERSION);

@@ -225,6 +225,10 @@ public:
         "/appearance/tabVisibility",
         NotebookTabVisibility::AllTabs,
     };
+    ChatterinoSetting<QStringList> alwaysVisibleChannels = {
+        "/appearance/alwaysVisibleChannels",
+        {},
+    };
     BoolSetting growWrappedNotebookLines = {
         "/appearance/growWrappedNotebookLines",
         false,

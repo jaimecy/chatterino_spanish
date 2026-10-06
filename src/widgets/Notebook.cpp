@@ -37,6 +37,7 @@
 #include <QWheelEvent>
 #include <QWidget>
 
+#include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <ranges>
@@ -278,39 +279,20 @@ int Notebook::visibleIndexOf(QWidget *page) const
         return this->indexOf(page);
     }
 
-    int i = 0;
-    for (const auto &item : this->items_)
+    const auto visible = this->visibleItems();
+    for (int i = 0; i < static_cast<int>(visible.size()); ++i)
     {
-        if (item.page == page)
+        if (visible[i].page == page)
         {
-            assert(this->tabVisibilityFilter_(item.tab));
             return i;
         }
-        if (this->tabVisibilityFilter_(item.tab))
-        {
-            ++i;
-        }
     }
-
     return -1;
 }
 
 int Notebook::getVisibleTabCount() const
 {
-    if (!this->tabVisibilityFilter_)
-    {
-        return this->items_.count();
-    }
-
-    int i = 0;
-    for (const auto &item : this->items_)
-    {
-        if (this->tabVisibilityFilter_(item.tab))
-        {
-            ++i;
-        }
-    }
-    return i;
+    return static_cast<int>(this->visibleItems().size());
 }
 
 void Notebook::select(QWidget *page, bool focusPage, bool recordInHistory)
@@ -519,113 +501,63 @@ void Notebook::selectVisibleIndex(int index, bool focusPage)
         return;
     }
 
-    int i = 0;
-    for (auto &item : this->items_)
+    const auto visible = this->visibleItems();
+    if (index < 0 || index >= static_cast<int>(visible.size()))
     {
-        if (this->tabVisibilityFilter_(item.tab))
-        {
-            if (i == index)
-            {
-                // found the index'th visible page
-                this->select(item.page, focusPage);
-                return;
-            }
-            ++i;
-        }
+        return;
     }
+    this->select(visible[index].page, focusPage);
 }
 
 void Notebook::selectNextTab(bool focusPage, bool recordInHistory)
 {
-    const int size = this->items_.size();
+    const auto visible = this->visibleItems();
 
-    if (!this->tabVisibilityFilter_)
+    if (visible.size() <= 1)
     {
-        if (size <= 1)
-        {
-            return;
-        }
-
-        auto index = (this->indexOf(this->selectedPage_) + 1) % size;
-        this->select(this->items_[index].page, focusPage, recordInHistory);
         return;
     }
 
-    // find next tab that is permitted by filter
-    const int startIndex = this->indexOf(this->selectedPage_);
-
-    auto index = (startIndex + 1) % size;
-    while (index != startIndex)
+    auto startIndex = this->visibleIndexOf(this->selectedPage_);
+    if (startIndex < 0)
     {
-        if (this->tabVisibilityFilter_(this->items_[index].tab))
-        {
-            this->select(this->items_[index].page, focusPage, recordInHistory);
-            return;
-        }
-        index = (index + 1) % size;
+        startIndex = 0;
     }
+
+    auto index = (startIndex + 1) % visible.size();
+    this->select(visible[index].page, focusPage, recordInHistory);
 }
 
 void Notebook::selectPreviousTab(bool focusPage, bool recordInHistory)
 {
-    const int size = this->items_.size();
+    const auto visible = this->visibleItems();
 
-    if (!this->tabVisibilityFilter_)
+    if (visible.size() <= 1)
     {
-        if (size <= 1)
-        {
-            return;
-        }
-
-        int index = this->indexOf(this->selectedPage_) - 1;
-        if (index < 0)
-        {
-            index += size;
-        }
-
-        this->select(this->items_[index].page, focusPage, recordInHistory);
         return;
     }
 
-    // find next previous tab that is permitted by filter
-    const int startIndex = this->indexOf(this->selectedPage_);
-
-    auto index = startIndex == 0 ? size - 1 : startIndex - 1;
-    while (index != startIndex)
+    auto startIndex = this->visibleIndexOf(this->selectedPage_);
+    if (startIndex < 0)
     {
-        if (this->tabVisibilityFilter_(this->items_[index].tab))
-        {
-            this->select(this->items_[index].page, focusPage, recordInHistory);
-            return;
-        }
-
-        index = index == 0 ? size - 1 : index - 1;
+        startIndex = 0;
     }
+
+    int index = startIndex == 0 ? static_cast<int>(visible.size()) - 1
+                                : startIndex - 1;
+    this->select(visible[index].page, focusPage, recordInHistory);
 }
 
 void Notebook::selectLastTab(bool focusPage)
 {
-    if (!this->tabVisibilityFilter_)
-    {
-        const auto size = this->items_.size();
-        if (size <= 1)
-        {
-            return;
-        }
+    const auto visible = this->visibleItems();
 
-        this->select(this->items_[size - 1].page, focusPage);
+    if (visible.size() <= 1)
+    {
         return;
     }
 
-    // find first tab permitted by filter starting from the end
-    for (auto it = this->items_.rbegin(); it != this->items_.rend(); ++it)
-    {
-        if (this->tabVisibilityFilter_(it->tab))
-        {
-            this->select(it->page, focusPage);
-            return;
-        }
-    }
+    this->select(visible.back().page, focusPage);
 }
 
 int Notebook::getPageCount() const
@@ -793,6 +725,33 @@ void Notebook::updateTabVisibility()
     }
 }
 
+std::vector<Notebook::Item> Notebook::visibleItems() const
+{
+    std::vector<Item> result;
+    result.reserve(this->items_.size());
+
+    if (this->tabVisibilityFilter_)
+    {
+        std::copy_if(this->items_.begin(), this->items_.end(),
+                     std::back_inserter(result),
+                     [this](const auto &item) {
+                         return this->tabVisibilityFilter_(item.tab);
+                     });
+        // When a filter is active (e.g. "Live + Always tabs"), always-visible
+        // tabs are shown to the right of the live tabs.
+        std::stable_partition(result.begin(), result.end(),
+                              [](const auto &item) {
+                                  return item.tab->isLive();
+                              });
+    }
+    else
+    {
+        result.assign(this->items_.begin(), this->items_.end());
+    }
+
+    return result;
+}
+
 bool Notebook::getShowAddButton() const
 {
     return this->showAddButton_;
@@ -836,20 +795,7 @@ void Notebook::resizeEvent(QResizeEvent *)
 
 void Notebook::performLayout(bool animated)
 {
-    std::vector<Item> filteredItems;
-    filteredItems.reserve(this->items_.size());
-    if (this->tabVisibilityFilter_)
-    {
-        std::copy_if(this->items_.begin(), this->items_.end(),
-                     std::back_inserter(filteredItems),
-                     [this](const auto &item) {
-                         return this->tabVisibilityFilter_(item.tab);
-                     });
-    }
-    else
-    {
-        filteredItems.assign(this->items_.begin(), this->items_.end());
-    }
+    std::vector<Item> filteredItems = this->visibleItems();
 
     const auto scale = this->scale();
     const auto tabHeight = int(NOTEBOOK_TAB_HEIGHT * scale);
@@ -1460,7 +1406,7 @@ SplitNotebook::SplitNotebook(Window *parent)
                      });
     tabVisibilityActionGroup->addAction(this->showAllTabsAction);
 
-    this->onlyShowLiveTabsAction = new QAction("Only show live tabs", this);
+    this->onlyShowLiveTabsAction = new QAction("Live + Always tabs", this);
     this->onlyShowLiveTabsAction->setCheckable(true);
     this->onlyShowLiveTabsAction->setShortcut(
         getApp()->getHotkeys()->getDisplaySequence(
@@ -1523,7 +1469,7 @@ SplitNotebook::SplitNotebook(Window *parent)
             {
                 case NotebookTabVisibility::LiveOnly:
                     this->setTabVisibilityFilter([](const NotebookTab *tab) {
-                        return tab->isLive();
+                        return tab->isLive() || tab->isAlwaysVisible();
                     });
                     break;
                 case NotebookTabVisibility::AllTabs:

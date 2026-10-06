@@ -7,6 +7,7 @@
 #include "common/QLogging.hpp"
 #include "singletons/NativeMessaging.hpp"
 #include "singletons/Settings.hpp"  // IWYU pragma: keep
+#include "util/I18n.hpp"
 #include "util/QMagicEnumTagged.hpp"
 #include "util/RapidJsonSerializeQString.hpp"  // IWYU pragma: keep
 #include "widgets/dialogs/ColorPickerDialog.hpp"
@@ -56,9 +57,9 @@ SettingWidget::SettingWidget(const QString &mainKeyword)
 SettingWidget *SettingWidget::checkbox(const QString &label,
                                        BoolSetting &setting)
 {
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *check = new SCheckBox(label);
+    auto *check = new SCheckBox(translateUI(label));
 
     widget->hLayout->addWidget(check);
     widget->hLayout->addWidget(widget->tooltipIcon);
@@ -86,9 +87,9 @@ SettingWidget *SettingWidget::checkbox(const QString &label,
 SettingWidget *SettingWidget::inverseCheckbox(const QString &label,
                                               BoolSetting &setting)
 {
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *check = new SCheckBox(label);
+    auto *check = new SCheckBox(translateUI(label));
 
     widget->hLayout->addWidget(check);
     widget->hLayout->addWidget(widget->tooltipIcon);
@@ -117,9 +118,9 @@ SettingWidget *SettingWidget::customCheckbox(
     const QString &label, bool initialValue,
     const std::function<void(bool)> &save)
 {
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *check = new SCheckBox(label);
+    auto *check = new SCheckBox(translateUI(label));
 
     widget->hLayout->addWidget(check);
     widget->hLayout->addWidget(widget->tooltipIcon);
@@ -139,9 +140,9 @@ SettingWidget *SettingWidget::intInput(const QString &label,
                                        IntSetting &setting,
                                        IntInputParams params)
 {
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *lbl = new QLabel(label + ":");
+    auto *lbl = new QLabel(translateUI(label) + ":");
 
     auto *input = new SpinBox;
     if (params.min.has_value())
@@ -189,9 +190,9 @@ template <typename T>
 SettingWidget *SettingWidget::dropdown(const QString &label,
                                        EnumStringSetting<T> &setting)
 {
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *lbl = new QLabel(label % ":");
+    auto *lbl = new QLabel(translateUI(label) % ":");
     auto *combo = new ComboBox;
     combo->setFocusPolicy(Qt::StrongFocus);
 
@@ -265,9 +266,9 @@ template <typename T>
 SettingWidget *SettingWidget::dropdown(const QString &label,
                                        EnumSetting<T> &setting)
 {
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *lbl = new QLabel(label % ":");
+    auto *lbl = new QLabel(translateUI(label) % ":");
     auto *combo = new ComboBox;
     combo->setFocusPolicy(Qt::StrongFocus);
 
@@ -345,9 +346,9 @@ SettingWidget *SettingWidget::dropdown(
     const QString &label, QStringSetting &setting,
     const std::vector<std::pair<QString, QVariant>> &items)
 {
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *lbl = new QLabel(label % ":");
+    auto *lbl = new QLabel(translateUI(label) % ":");
     auto *combo = new ComboBox;
     combo->setFocusPolicy(Qt::StrongFocus);
 
@@ -409,9 +410,9 @@ SettingWidget *SettingWidget::colorButton(const QString &label,
                                           QStringSetting &setting)
 {
     QColor color(setting.getValue());
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *lbl = new QLabel(label + ":");
+    auto *lbl = new QLabel(translateUI(label) + ":");
 
     auto *colorButton = new ColorButton(color);
 
@@ -452,15 +453,15 @@ SettingWidget *SettingWidget::lineEdit(const QString &label,
                                        QStringSetting &setting,
                                        const QString &placeholderText)
 {
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *lbl = new QLabel(label + ":");
+    auto *lbl = new QLabel(translateUI(label) + ":");
 
     auto *edit = new QLineEdit;
     edit->setText(setting);
     if (!placeholderText.isEmpty())
     {
-        edit->setPlaceholderText(placeholderText);
+        edit->setPlaceholderText(translateUI(placeholderText));
     }
 
     widget->hLayout->addWidget(lbl);
@@ -496,9 +497,9 @@ SettingWidget *SettingWidget::fontButton(const QString &label,
                                          std::function<QFont()> currentFont,
                                          std::function<void(QFont)> onChange)
 {
-    auto *widget = new SettingWidget(label);
+    auto *widget = new SettingWidget(translateUI(label));
 
-    auto *lbl = new QLabel(label + ":");
+    auto *lbl = new QLabel(translateUI(label) + ":");
 
     auto *button = new SPushButton(currentFont().family());
 
@@ -534,6 +535,8 @@ SettingWidget *SettingWidget::fontButton(const QString &label,
 SettingWidget *SettingWidget::setTooltip(QString tooltip)
 {
     assert(!tooltip.isEmpty());
+
+    tooltip = translateUI(tooltip);
 
     if (tooltip.length() > MAX_TOOLTIP_LINE_LENGTH)
     {
@@ -572,7 +575,9 @@ SettingWidget *SettingWidget::setTooltip(QString tooltip)
 
 SettingWidget *SettingWidget::setDescription(const QString &text)
 {
-    auto *lbl = new QLabel(text);
+    const auto translated = translateUI(text);
+
+    auto *lbl = new QLabel(translated);
     lbl->setTextInteractionFlags(Qt::TextBrowserInteraction |
                                  Qt::LinksAccessibleByKeyboard);
     lbl->setOpenExternalLinks(true);
@@ -581,7 +586,7 @@ SettingWidget *SettingWidget::setDescription(const QString &text)
 
     this->vLayout->insertWidget(0, lbl);
 
-    this->keywords.append(text);
+    this->keywords.append(translated);
 
     return this;
 }

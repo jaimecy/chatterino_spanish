@@ -73,6 +73,17 @@ public:
     bool isLive() const;
 
     /**
+     * @brief Sets whether this tab should be considered always visible (kept
+     * visible even when it is not live in the \"Live + Always tabs\" mode).
+     **/
+    void setAlwaysVisible(bool value);
+
+    /**
+     * @brief Returns true if this tab is always visible even if it is not live
+     **/
+    bool isAlwaysVisible() const;
+
+    /**
      * @brief Sets the highlight state of this tab clearing highlight sources
      *
      * Obeys the HighlightsEnabled setting and highlight states hierarchy
@@ -166,6 +177,7 @@ private:
 
     bool isLive_{};
     bool isRerun_{};
+    bool alwaysVisible_{};
 
     int growWidth_ = 0;
     QSize computedMinimumSize;
@@ -177,6 +189,7 @@ private:
     QMenu *closeMultipleTabsMenu_{};
     QAction *closeTabsBeforeSelectedAction_{};
     QAction *closeTabsAfterSelectedAction_{};
+    QAction *alwaysVisibleAction_{};
 
     pajlada::Signals::SignalHolder managedConnections_;
 };

@@ -7,6 +7,7 @@
 #include "Application.hpp"
 #include "common/ChatterinoSetting.hpp"
 #include "singletons/WindowManager.hpp"
+#include "util/I18n.hpp"
 #include "util/Variant.hpp"
 #include "widgets/buttons/SignalLabel.hpp"
 
@@ -144,8 +145,8 @@ public:
     template <typename OnClick>
     QPushButton *makeButton(const QString &text, OnClick onClick)
     {
-        auto *button = new QPushButton(text);
-        this->groups_.back().widgets.push_back({button, {text}});
+        auto *button = new QPushButton(translateUI(text));
+        this->groups_.back().widgets.push_back({button, {translateUI(text)}});
         QObject::connect(button, &QPushButton::clicked, onClick);
         return button;
     }

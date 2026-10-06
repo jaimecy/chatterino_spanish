@@ -1034,6 +1034,27 @@ if (BUILD_APP)
 
     set_target_directory_hierarchy(${EXECUTABLE_PROJECT})
 
+    # Translations
+    find_program(LRELEASE_PROGRAM NAMES lrelease
+        HINTS "${Qt6_DIR}/../../../bin"
+    )
+    if (LRELEASE_PROGRAM)
+        set(CHATTERINO_TS_FILE "${CMAKE_SOURCE_DIR}/translations/chatterino_es.ts")
+        set(CHATTERINO_QM_FILE "${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}_es.qm")
+        add_custom_command(
+            OUTPUT ${CHATTERINO_QM_FILE}
+            COMMAND ${LRELEASE_PROGRAM} -silent ${CHATTERINO_TS_FILE} -qm ${CHATTERINO_QM_FILE}
+            DEPENDS ${CHATTERINO_TS_FILE}
+            COMMENT "Generating ${PROJECT_NAME}_es.qm translation file"
+            VERBATIM
+        )
+        add_custom_target(${PROJECT_NAME}_es.qm ALL
+            DEPENDS ${CHATTERINO_QM_FILE}
+        )
+    else ()
+        message(WARNING "lrelease not found, translation file will not be generated")
+    endif ()
+
     if (WIN32)
         if (WINDEPLOYQT_PATH)
             file(TO_CMAKE_PATH "${WINDEPLOYQT_PATH}" WINDEPLOYQT_PATH)
@@ -1093,6 +1114,13 @@ if (BUILD_APP)
             COMPONENT ${PROJECT_NAME}
             OPTIONAL
         )
+
+        if (LRELEASE_PROGRAM AND EXISTS ${CHATTERINO_QM_FILE})
+            install(FILES ${CHATTERINO_QM_FILE}
+                DESTINATION .
+                COMPONENT ${PROJECT_NAME}
+            )
+        endif ()
 
         install(
             CODE

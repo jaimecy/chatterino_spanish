@@ -231,6 +231,14 @@ private:
     void updateTabVisibility();
     void resizeAddButton();
 
+    /**
+     * @brief Returns the pages of this notebook that should be displayed,
+     * i.e. the pages permitted by the tab visibility filter (if any), ordered
+     * so that live tabs come first and the remaining tabs (such as
+     * always-visible tabs) follow them on the right.
+     **/
+    std::vector<Item> visibleItems() const;
+
     bool containsPage(QWidget *page) const;
     std::optional<Item> findItem(QWidget *page);
 

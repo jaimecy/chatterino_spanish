@@ -166,6 +166,16 @@ NotebookTab::NotebookTab(Notebook *notebook)
                      });
     this->menu_.addAction(this->highlightNewMessagesAction_);
 
+    this->alwaysVisibleAction_ =
+        new QAction("Always show this tab", &this->menu_);
+    this->alwaysVisibleAction_->setCheckable(true);
+    this->alwaysVisibleAction_->setChecked(this->alwaysVisible_);
+    QObject::connect(this->alwaysVisibleAction_, &QAction::toggled, this,
+                     [this](bool checked) {
+                         this->setAlwaysVisible(checked);
+                     });
+    this->menu_.addAction(this->alwaysVisibleAction_);
+
     this->menu_.addSeparator();
 
     this->notebook_->addNotebookActionsToMenu(&this->menu_);
@@ -520,6 +530,13 @@ void NotebookTab::setDefaultTitle(const QString &title)
     {
         this->defaultTitle_ = title;
 
+        this->alwaysVisible_ =
+            getSettings()->alwaysVisibleChannels.getValue().contains(title);
+        if (this->alwaysVisibleAction_ != nullptr)
+        {
+            this->alwaysVisibleAction_->setChecked(this->alwaysVisible_);
+        }
+
         if (this->customTitle_.isEmpty())
         {
             this->titleUpdated();
@@ -730,6 +747,40 @@ bool NotebookTab::setLive(bool isLive)
 bool NotebookTab::isLive() const
 {
     return this->isLive_;
+}
+
+void NotebookTab::setAlwaysVisible(bool value)
+{
+    if (this->alwaysVisible_ != value)
+    {
+        this->alwaysVisible_ = value;
+
+        auto visibleChannels = getSettings()->alwaysVisibleChannels.getValue();
+        if (value)
+        {
+            if (!this->defaultTitle_.isEmpty() &&
+                !visibleChannels.contains(this->defaultTitle_))
+            {
+                visibleChannels.append(this->defaultTitle_);
+                getSettings()->alwaysVisibleChannels.setValue(visibleChannels);
+            }
+        }
+        else
+        {
+            if (visibleChannels.removeAll(this->defaultTitle_) > 0)
+            {
+                getSettings()->alwaysVisibleChannels.setValue(visibleChannels);
+            }
+        }
+
+        this->notebook_->refresh();
+        this->update();
+    }
+}
+
+bool NotebookTab::isAlwaysVisible() const
+{
+    return this->alwaysVisible_;
 }
 
 HighlightState NotebookTab::highlightState() const
