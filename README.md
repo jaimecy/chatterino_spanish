@@ -11,6 +11,10 @@ Contribution guidelines can be found [here](https://wiki.chatterino.com/Contribu
 Current releases are available at [https://chatterino.com](https://chatterino.com).
 Windows users can also install Chatterino [from Chocolatey](https://chocolatey.org/packages/chatterino).
 
+## Spanish translation
+
+This fork includes an in-progress Spanish translation of the Chatterino user interface. When the system locale is set to Spanish, the settings pages (titles, descriptions, labels and tooltips) are shown in Spanish. The translation catalog lives in [`translations/chatterino_es.ts`](translations/chatterino_es.ts) and is compiled automatically at build time via `lrelease`. It also includes a small improvement so that tabs marked as "Always show this tab" are displayed to the right of the live tabs when the "Live + Always tabs" visibility mode is active.
+
 ## Nightly build
 
 You can download the latest Chatterino 2 build over [here](https://github.com/Chatterino/chatterino2/releases/tag/nightly-build)
